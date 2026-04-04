@@ -1,0 +1,12 @@
+{
+  "name": "proline-ai-backend",
+  "version": "1.0.0",
+  "description": "AI backend for FixIt field technician assistant",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ai": "^6.0.0"
+  }
+}
