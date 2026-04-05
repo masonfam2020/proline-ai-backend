@@ -74,16 +74,20 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { question, messages } = req.body;
+    const { equipmentType, brand, model, issue } = req.body || {};
 
-    // Support both simple question format and messages array
-    const userQuestion = question || (messages && messages.length > 0 ? messages[messages.length - 1].content || messages[messages.length - 1].parts?.[0]?.text : null);
+if (!issue || !issue.trim()) {
+  return res.status(400).json({
+    error: "Issue is required."
+  });
+}
 
-    if (!userQuestion) {
-      return res.status(400).json({ 
-        error: 'Missing question. Send { "question": "your question here" }' 
-      });
-    }
+const combinedText = `
+Equipment Type: ${equipmentType || "Unknown"}
+Brand: ${brand || "Unknown"}
+Model: ${model || "Unknown"}
+Issue: ${issue}
+`.trim();
 
     // Check for safety refusals first
     for (const rule of SAFETY_REFUSALS) {
