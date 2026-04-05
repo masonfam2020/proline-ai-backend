@@ -1,9 +1,5 @@
 import OpenAI from "openai";
 
-const client = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 function isHighRisk(text = "") {
   const t = text.toLowerCase();
 
@@ -40,10 +36,18 @@ export default async function handler(req, res) {
   }
 
   try {
+    if (!process.env.OPENAI_API_KEY) {
+      return res.status(500).json({
+        error: "Missing OPENAI_API_KEY in Vercel environment variables."
+      });
+    }
+
     const { equipmentType, brand, model, issue } = req.body || {};
 
     if (!issue || !issue.trim()) {
-      return res.status(400).json({ error: "Issue is required." });
+      return res.status(400).json({
+        error: "Issue is required."
+      });
     }
 
     const combinedText = `
@@ -55,18 +59,16 @@ Issue: ${issue}
 
     if (isHighRisk(combinedText)) {
       return res.status(200).json({
-        answer: `This looks like a high-risk situation.
-
-Issue summary:
+        answer: `Issue summary:
 High-risk category detected.
 
 Likely causes:
-- The issue may involve gas, combustion, live electrical, refrigerant, or another serious hazard.
+- The problem may involve gas, combustion, live electrical, refrigerant, or another serious hazard.
 - More detail is needed before safe troubleshooting can continue.
 
 Safe next checks:
 - Stop work until the hazard is controlled.
-- Isolate power/fuel safely if appropriate.
+- Isolate power or fuel safely if appropriate.
 - Use manufacturer documentation and proper licensed procedure.
 
 Likely parts to verify:
@@ -79,27 +81,31 @@ Medium`,
       });
     }
 
+    const client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY,
+    });
+
     const response = await client.responses.create({
-      model: "gpt-5.4",
+      model: "gpt-4.1-mini",
       input: [
         {
           role: "system",
-          content: `
-You are a contractor-focused troubleshooting assistant for appliance, plumbing, and light mechanical field work.
+          content: `You are a contractor-focused troubleshooting assistant for appliance, plumbing, and light mechanical field work.
 
 Rules:
 - Be direct, short, and practical.
 - Assume the user is on a phone at a job site.
 - Return exactly these sections:
+
 Issue summary:
 Likely causes:
 Safe next checks:
 Likely parts to verify:
 Confidence:
+
 - Do not give unsafe step-by-step instructions for gas, combustion, live electrical, refrigerant, or code compliance.
 - If uncertain, say so clearly.
-- Do not pretend exact model certainty unless the model info is specific.
-`
+- Do not pretend exact model certainty unless the model info is specific.`
         },
         {
           role: "user",
@@ -116,10 +122,10 @@ Confidence:
         "Guidance only. Verify with manufacturer documentation, safe testing procedure, local code, and licensed trade judgment."
     });
   } catch (error) {
-    console.error("API error:", error);
+    console.error("API error details:", error);
 
     return res.status(500).json({
-      error: "Server error while getting troubleshooting help."
+      error: error?.message || "Server error while getting troubleshooting help."
     });
   }
 }
